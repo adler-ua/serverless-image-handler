@@ -7,8 +7,8 @@ import { Construct } from "constructs";
 import { ConditionAspect, SuppressLambdaFunctionCfnRulesAspect } from "../utils/aspects";
 import { BackEnd } from "./back-end/back-end-construct";
 import { CommonResources } from "./common-resources/common-resources-construct";
-import { FrontEndConstruct as FrontEnd } from "./front-end/front-end-construct";
 import { SolutionConstructProps, YesNo } from "./types";
+import { env } from "process";
 
 export interface ServerlessImageHandlerStackProps extends StackProps {
   readonly solutionId: string;
@@ -39,14 +39,6 @@ export class ServerlessImageHandlerStack extends Stack {
         "(Required) List the buckets (comma-separated) within your account that contain original image files. If you plan to use Thumbor or Custom image requests with this solution, the source bucket for those requests will default to the first bucket listed in this field.",
       allowedPattern: ".+",
       default: "defaultBucket, bucketNo2, bucketNo3, ...",
-    });
-
-    const deployDemoUIParameter = new CfnParameter(this, "DeployDemoUIParameter", {
-      type: "String",
-      description:
-        "Would you like to deploy a demo UI to explore the features and capabilities of this solution? This will create an additional Amazon S3 bucket and Amazon CloudFront distribution in your account.",
-      allowedValues: ["Yes", "No"],
-      default: "Yes",
     });
 
     const logRetentionPeriodParameter = new CfnParameter(this, "LogRetentionPeriodParameter", {
@@ -147,7 +139,6 @@ export class ServerlessImageHandlerStack extends Stack {
       corsEnabled: corsEnabledParameter.valueAsString,
       corsOrigin: corsOriginParameter.valueAsString,
       sourceBuckets: sourceBucketsParameter.valueAsString,
-      deployUI: deployDemoUIParameter.valueAsString as YesNo,
       logRetentionPeriod: logRetentionPeriodParameter.valueAsNumber,
       autoWebP: autoWebPParameter.valueAsString,
       enableSignature: enableSignatureParameter.valueAsString as YesNo,
@@ -165,11 +156,6 @@ export class ServerlessImageHandlerStack extends Stack {
       ...solutionConstructProps,
     });
 
-    const frontEnd = new FrontEnd(this, "FrontEnd", {
-      logsBucket: commonResources.logsBucket,
-      conditions: commonResources.conditions,
-    });
-
     const backEnd = new BackEnd(this, "BackEnd", {
       solutionVersion: props.solutionVersion,
       solutionId: props.solutionId,
@@ -182,13 +168,6 @@ export class ServerlessImageHandlerStack extends Stack {
       ...solutionConstructProps,
     });
 
-    commonResources.customResources.setupWebsiteHostingBucketPolicy(frontEnd.websiteHostingBucket);
-
-    commonResources.customResources.setupAnonymousMetric({
-      anonymousData: anonymousUsage,
-      ...solutionConstructProps,
-    });
-
     commonResources.customResources.setupValidateSourceAndFallbackImageBuckets({
       sourceBuckets: sourceBucketsParameter.valueAsString,
       fallbackImageS3Bucket: fallbackImageS3BucketParameter.valueAsString,
@@ -198,17 +177,6 @@ export class ServerlessImageHandlerStack extends Stack {
     commonResources.customResources.setupValidateSecretsManager({
       secretsManager: secretsManagerSecretParameter.valueAsString,
       secretsManagerKey: secretsManagerKeyParameter.valueAsString,
-    });
-
-    commonResources.customResources.setupCopyWebsiteCustomResource({
-      hostingBucket: frontEnd.websiteHostingBucket,
-    });
-    const singletonFunction = this.node.findChild("Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C");
-    Aspects.of(singletonFunction).add(new ConditionAspect(commonResources.conditions.deployUICondition));
-
-    commonResources.customResources.setupPutWebsiteConfigCustomResource({
-      hostingBucket: frontEnd.websiteHostingBucket,
-      apiEndpoint: backEnd.domainName,
     });
 
     commonResources.appRegistryApplication({
@@ -228,10 +196,6 @@ export class ServerlessImageHandlerStack extends Stack {
           {
             Label: { default: "Image Sources" },
             Parameters: [sourceBucketsParameter.logicalId],
-          },
-          {
-            Label: { default: "Demo UI" },
-            Parameters: [deployDemoUIParameter.logicalId],
           },
           {
             Label: { default: "Event Logging" },
@@ -268,7 +232,6 @@ export class ServerlessImageHandlerStack extends Stack {
           [corsEnabledParameter.logicalId]: { default: "CORS Enabled" },
           [corsOriginParameter.logicalId]: { default: "CORS Origin" },
           [sourceBucketsParameter.logicalId]: { default: "Source Buckets" },
-          [deployDemoUIParameter.logicalId]: { default: "Deploy Demo UI" },
           [logRetentionPeriodParameter.logicalId]: {
             default: "Log Retention Period",
           },
@@ -300,11 +263,6 @@ export class ServerlessImageHandlerStack extends Stack {
     new CfnOutput(this, "ApiEndpoint", {
       value: `https://${backEnd.domainName}`,
       description: "Link to API endpoint for sending image requests to.",
-    });
-    new CfnOutput(this, "DemoUrl", {
-      value: `https://${frontEnd.domainName}/index.html`,
-      description: "Link to the demo user interface for the solution.",
-      condition: commonResources.conditions.deployUICondition,
     });
     new CfnOutput(this, "SourceBuckets", {
       value: sourceBucketsParameter.valueAsString,

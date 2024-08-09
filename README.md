@@ -70,7 +70,6 @@ cd $MAIN_DIRECTORY/source/constructs
 npm run clean:install
 overrideWarningsEnabled=false npx cdk bootstrap --profile <PROFILE_NAME>
 overrideWarningsEnabled=false npx cdk deploy\
- --parameters DeployDemoUIParameter=Yes\
   --parameters SourceBucketsParameter=<MY_BUCKET>\
    --profile <PROFILE_NAME>
 ```

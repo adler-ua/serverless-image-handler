@@ -13,7 +13,6 @@ export interface SendMetricsRequestProperties extends CustomResourceRequestPrope
   UUID: string;
   CorsEnabled: string;
   SourceBuckets: string;
-  DeployDemoUi: string;
   LogRetentionPeriod: number;
   AutoWebP: string;
   EnableSignature: string;
@@ -80,7 +79,6 @@ export interface MetricsPayloadData {
   Type: CustomResourceRequestTypes;
   CorsEnabled: string;
   NumberOfSourceBuckets: number;
-  DeployDemoUi: string;
   LogRetentionPeriod: number;
   AutoWebP: string;
   EnableSignature: string;

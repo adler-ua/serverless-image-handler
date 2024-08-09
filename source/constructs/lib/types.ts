@@ -7,7 +7,6 @@ export interface SolutionConstructProps {
   readonly corsEnabled: string;
   readonly corsOrigin: string;
   readonly sourceBuckets: string;
-  readonly deployUI: YesNo;
   readonly logRetentionPeriod: number;
   readonly autoWebP: string;
   readonly enableSignature: YesNo;
