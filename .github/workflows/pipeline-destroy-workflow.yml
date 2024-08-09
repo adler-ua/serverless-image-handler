@@ -1,4 +1,4 @@
-name: Pipeline Workflow
+name: DESTROY(!) Infrastructure
 
 env:
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
@@ -10,7 +10,7 @@ on:
 
 jobs:
   pipeline-job:
-    name: DESTROY(!) Infrastructure
+    name: Destroy Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -1,4 +1,4 @@
-name: Pipeline Workflow
+name: Deploy Infrastructure
 
 env:
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
@@ -14,6 +14,9 @@ on:
       - main
     paths:
       - 'source/**'
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
