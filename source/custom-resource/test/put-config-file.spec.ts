@@ -29,7 +29,6 @@ describe("PUT_CONFIG_FILE", () => {
         Key: "Value",
       },
       DestS3Bucket: "destination-bucket",
-      DestS3key: "demo-ui-config.js",
     },
   };
 

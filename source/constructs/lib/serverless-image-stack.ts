@@ -178,9 +178,6 @@ export class ServerlessImageHandlerStack extends Stack {
       secretsManagerKey: secretsManagerKeyParameter.valueAsString,
     });
 
-    // const singletonFunction = this.node.findChild("Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C");
-    // Aspects.of(singletonFunction).add(new ConditionAspect(commonResources.conditions.deployUICondition));
-
     commonResources.appRegistryApplication({
       description: `${props.solutionId} - ${props.solutionName}. Version ${props.solutionVersion}`,
       solutionVersion: props.solutionVersion,

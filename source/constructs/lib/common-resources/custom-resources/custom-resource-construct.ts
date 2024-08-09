@@ -150,21 +150,6 @@ export class CustomResourcesConstruct extends Construct {
     this.uuid = customResourceUuid.getAttString("UUID");
   }
 
-  public setupWebsiteHostingBucketPolicy(websiteHostingBucket: IBucket) {
-    const websiteHostingBucketPolicy = new Policy(this, "WebsiteHostingBucketPolicy", {
-      document: new PolicyDocument({
-        statements: [
-          new PolicyStatement({
-            actions: ["s3:GetObject", "s3:PutObject",],
-            resources: [websiteHostingBucket.bucketArn + "/*"],
-          }),
-        ],
-      }),
-      roles: [this.customResourceRole],
-    })
-    addCfnCondition(websiteHostingBucketPolicy, this.conditions.deployUICondition);
-  };
-
   public setupAnonymousMetric(props: AnonymousMetricCustomResourceProps) {
     this.createCustomResource("CustomResourceAnonymousMetric", this.customResourceLambda, {
       CustomAction: "sendMetric",
@@ -196,34 +181,6 @@ export class CustomResourcesConstruct extends Construct {
         FallbackImageS3Key: props.fallbackImageS3Key,
       },
       this.conditions.enableDefaultFallbackImageCondition
-    );
-  }
-
-  public setupCopyWebsiteCustomResource(props: SetupCopyWebsiteCustomResourceProps) {
-    // Stage static assets for the front-end from the local
-    /* eslint-disable no-new */
-    const bucketDeployment = new BucketDeployment(this, "DeployWebsite", {
-      sources: [
-        S3Source.asset(path.join(__dirname, "../../../../demo-ui"), { exclude: ["node_modules/*"] }),
-      ],
-      destinationBucket: props.hostingBucket,
-      exclude: ["demo-ui-config.js"],
-    });
-    Aspects.of(bucketDeployment).add(new ConditionAspect(this.conditions.deployUICondition));
-  }
-
-  public setupPutWebsiteConfigCustomResource(props: SetupPutWebsiteConfigCustomResourceProps) {
-    this.createCustomResource(
-      "PutWebsiteConfig",
-      this.customResourceLambda,
-      {
-        CustomAction: "putConfigFile",
-        Region: Aws.REGION,
-        ConfigItem: { apiEndpoint: `https://${props.apiEndpoint}` },
-        DestS3Bucket: props.hostingBucket.bucketName,
-        DestS3key: "demo-ui-config.js",
-      },
-      this.conditions.deployUICondition
     );
   }
 
