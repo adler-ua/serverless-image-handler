@@ -3,7 +3,8 @@ name: Pipeline Workflow
 env:
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
   REGION: us-east-1
-  DIST_OUTPUT_BUCKET: my-serverless-image-handler-images
+  ACCOUNT: 637747527212
+  SOURCE_BUCKET: my-serverless-image-handler-images
   SOLUTION_NAME: my-serverless-image-handler
   VERSION: 1
 

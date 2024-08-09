@@ -4,7 +4,7 @@ env:
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
   REGION: us-east-1
   ACCOUNT: 637747527212
-  DIST_OUTPUT_BUCKET: my-serverless-image-handler-images
+  SOURCE_BUCKET: my-serverless-image-handler-images
   SOLUTION_NAME: my-serverless-image-handler
   VERSION: 1
 
@@ -67,4 +67,4 @@ jobs:
         run: cdk diff
 
       - name: CDK deploy
-        run: overrideWarningsEnabled=false npx cdk deploy --all --parameters SourceBucketsParameter=${{ env.DIST_OUTPUT_BUCKET }} --require-approval never
+        run: overrideWarningsEnabled=false npx cdk deploy --all --parameters SourceBucketsParameter=${{ env.SOURCE_BUCKET }} --require-approval never
