@@ -78,8 +78,8 @@ jobs:
 
       - name: CDK diff
         id: cdk-diff
-        run: cdk diff
+        run: NODE_OPTIONS=--max_old_space_size=6000 && cdk diff
 
       - name: CDK Deploy
         #if: github.ref == 'refs/heads/main'
-        run: cdk deploy --all --require-approval never
+        run: NODE_OPTIONS=--max_old_space_size=6000 && cdk deploy --all --require-approval never
