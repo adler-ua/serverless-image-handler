@@ -1,0 +1,61 @@
+name: Pipeline Workflow
+
+env:
+  AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
+  REGION: us-east-1
+  DIST_OUTPUT_BUCKET: my-serverless-image-handler-images
+  SOLUTION_NAME: my-serverless-image-handler
+  VERSION: 1
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pipeline-job:
+    name: Bootstrap Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: source/constructs
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2        
+      
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+        
+      - name: npm install
+        working-directory: source
+        run: npm install
+      
+      - name: npm install for constructs
+        working-directory: source/constructs
+        run: npm install
+      
+      - name: npm install for custom resource
+        working-directory: source/custom-resource
+        run: npm install
+      
+      - name: npm install image-handler
+        working-directory: source/image-handler
+        run: npm install
+
+      - name: install aws-cdk
+        run: npm install -g aws-cdk
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.REGION }}
+          role-duration-seconds: 900
+      
+      - name: CDK Bootstap
+        if: github.ref == 'refs/heads/main'
+        run: overrideWarningsEnabled=false npx cdk bootstrap --all --require-approval never

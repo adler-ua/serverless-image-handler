@@ -8,22 +8,11 @@ env:
   VERSION: 1
 
 on:
-  pull_request:
-    branches:
-      - main
-    paths:
-      - 'source/constructs/**'
-  # push:
-  #   branches:
-  #     - main
-  #   paths:
-  #     - 'infrastructure/**'
   workflow_dispatch:
 
 jobs:
   pipeline-job:
-    name: Pipeline Job
-    #if: github.repository_owner == 'aws-solutions'
+    name: DESTROY(!) Infrastructure
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,8 +23,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-        
+        uses: actions/checkout@v2        
       
       - name: Set up Node
         uses: actions/setup-node@v3
@@ -68,18 +56,6 @@ jobs:
           aws-region: ${{ env.REGION }}
           role-duration-seconds: 900
       
-      #- name: CDK Bootstap
-      #  if: github.ref == 'refs/heads/main'
-      #  run: cdk bootstrap
-
-      - name: CDK bootstrap
-        run: overrideWarningsEnabled=false npx cdk bootstrap --all --require-approval never
-
-      - name: CDK diff
-        id: cdk-diff
-        run: NODE_OPTIONS=--max_old_space_size=6000 && cdk diff
-
-      - name: CDK deploy
-        run: overrideWarningsEnabled=false npx cdk bootstrap
-              overrideWarningsEnabled=false npx cdk deploy --all --require-approval never\
-              --parameters SourceBucketsParameter=${{ env.DIST_OUTPUT_BUCKET }}
+      - name: CDK Destroy
+        if: github.ref == 'refs/heads/main'
+        run: cdk destroy --force
