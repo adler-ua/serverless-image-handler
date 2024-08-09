@@ -41,24 +41,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "18"
+        
+      - name: npm install
+        working-directory: source
+        run: npm install
+          cd source/constructs && npm install
 
       - name: install aws-cdk
         run: npm install -g aws-cdk
-
-      - name: install packages for custom-resource
-        working-directory: source/custom-resource 
-        run: npm install
-
-      - name: install packages for image-handler
-        working-directory: source/image-handler 
-        run: npm install
-
-      - name: install packages for demo-ui
-        working-directory: source/demo-ui
-        run: npm install
-
-      - name: npm install
-        run: npm install
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -67,11 +57,7 @@ jobs:
           aws-region: ${{ env.REGION }}
           role-duration-seconds: 900
           role-session-name: OIDCSession
-      # - name: Run CodeBuild
-      #   uses: aws-actions/aws-codebuild-run-build@v1
-      #   with:
-      #     project-name: ${{ secrets.DISPATCHER_CODEBUILD_PROJECT_NAME }}
-
+      
       #- name: CDK Bootstap
       #  if: github.ref == 'refs/heads/main'
       #  run: cdk bootstrap
@@ -80,6 +66,10 @@ jobs:
         id: cdk-diff
         run: NODE_OPTIONS=--max_old_space_size=6000 && cdk diff
 
-      - name: CDK Deploy
-        #if: github.ref == 'refs/heads/main'
-        run: NODE_OPTIONS=--max_old_space_size=6000 && cdk deploy --all --require-approval never
+      - name: CDK bootstrap
+        run: overrideWarningsEnabled=false npx cdk bootstrap --all --require-approval never
+
+      - name: CDK deploy
+        run: overrideWarningsEnabled=false npx cdk bootstrap
+              overrideWarningsEnabled=false npx cdk deploy --all --require-approval never\
+              --parameters SourceBucketsParameter=${{ env.DIST_OUTPUT_BUCKET }}

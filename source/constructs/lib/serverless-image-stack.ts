@@ -7,7 +7,6 @@ import { Construct } from "constructs";
 import { ConditionAspect, SuppressLambdaFunctionCfnRulesAspect } from "../utils/aspects";
 import { BackEnd } from "./back-end/back-end-construct";
 import { CommonResources } from "./common-resources/common-resources-construct";
-import { FrontEndConstruct as FrontEnd } from "./front-end/front-end-construct";
 import { SolutionConstructProps, YesNo } from "./types";
 
 export interface ServerlessImageHandlerStackProps extends StackProps {
@@ -165,11 +164,6 @@ export class ServerlessImageHandlerStack extends Stack {
       ...solutionConstructProps,
     });
 
-    const frontEnd = new FrontEnd(this, "FrontEnd", {
-      logsBucket: commonResources.logsBucket,
-      conditions: commonResources.conditions,
-    });
-
     const backEnd = new BackEnd(this, "BackEnd", {
       solutionVersion: props.solutionVersion,
       solutionId: props.solutionId,
@@ -179,13 +173,6 @@ export class ServerlessImageHandlerStack extends Stack {
       uuid: commonResources.customResources.uuid,
       cloudFrontPriceClass: cloudFrontPriceClassParameter.valueAsString,
       createSourceBucketsResource: commonResources.customResources.createSourceBucketsResource,
-      ...solutionConstructProps,
-    });
-
-    commonResources.customResources.setupWebsiteHostingBucketPolicy(frontEnd.websiteHostingBucket);
-
-    commonResources.customResources.setupAnonymousMetric({
-      anonymousData: anonymousUsage,
       ...solutionConstructProps,
     });
 
@@ -200,16 +187,8 @@ export class ServerlessImageHandlerStack extends Stack {
       secretsManagerKey: secretsManagerKeyParameter.valueAsString,
     });
 
-    commonResources.customResources.setupCopyWebsiteCustomResource({
-      hostingBucket: frontEnd.websiteHostingBucket,
-    });
     const singletonFunction = this.node.findChild("Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C");
     Aspects.of(singletonFunction).add(new ConditionAspect(commonResources.conditions.deployUICondition));
-
-    commonResources.customResources.setupPutWebsiteConfigCustomResource({
-      hostingBucket: frontEnd.websiteHostingBucket,
-      apiEndpoint: backEnd.domainName,
-    });
 
     commonResources.appRegistryApplication({
       description: `${props.solutionId} - ${props.solutionName}. Version ${props.solutionVersion}`,
@@ -300,11 +279,6 @@ export class ServerlessImageHandlerStack extends Stack {
     new CfnOutput(this, "ApiEndpoint", {
       value: `https://${backEnd.domainName}`,
       description: "Link to API endpoint for sending image requests to.",
-    });
-    new CfnOutput(this, "DemoUrl", {
-      value: `https://${frontEnd.domainName}/index.html`,
-      description: "Link to the demo user interface for the solution.",
-      condition: commonResources.conditions.deployUICondition,
     });
     new CfnOutput(this, "SourceBuckets", {
       value: sourceBucketsParameter.valueAsString,
