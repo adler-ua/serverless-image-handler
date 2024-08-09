@@ -40,14 +40,6 @@ export class ServerlessImageHandlerStack extends Stack {
       default: "defaultBucket, bucketNo2, bucketNo3, ...",
     });
 
-    const deployDemoUIParameter = new CfnParameter(this, "DeployDemoUIParameter", {
-      type: "String",
-      description:
-        "Would you like to deploy a demo UI to explore the features and capabilities of this solution? This will create an additional Amazon S3 bucket and Amazon CloudFront distribution in your account.",
-      allowedValues: ["Yes", "No"],
-      default: "Yes",
-    });
-
     const logRetentionPeriodParameter = new CfnParameter(this, "LogRetentionPeriodParameter", {
       type: "Number",
       description:
@@ -146,7 +138,6 @@ export class ServerlessImageHandlerStack extends Stack {
       corsEnabled: corsEnabledParameter.valueAsString,
       corsOrigin: corsOriginParameter.valueAsString,
       sourceBuckets: sourceBucketsParameter.valueAsString,
-      deployUI: deployDemoUIParameter.valueAsString as YesNo,
       logRetentionPeriod: logRetentionPeriodParameter.valueAsNumber,
       autoWebP: autoWebPParameter.valueAsString,
       enableSignature: enableSignatureParameter.valueAsString as YesNo,
@@ -187,8 +178,8 @@ export class ServerlessImageHandlerStack extends Stack {
       secretsManagerKey: secretsManagerKeyParameter.valueAsString,
     });
 
-    const singletonFunction = this.node.findChild("Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C");
-    Aspects.of(singletonFunction).add(new ConditionAspect(commonResources.conditions.deployUICondition));
+    // const singletonFunction = this.node.findChild("Custom::CDKBucketDeployment8693BB64968944B69AAFB0CC9EB8756C");
+    // Aspects.of(singletonFunction).add(new ConditionAspect(commonResources.conditions.deployUICondition));
 
     commonResources.appRegistryApplication({
       description: `${props.solutionId} - ${props.solutionName}. Version ${props.solutionVersion}`,
@@ -207,10 +198,6 @@ export class ServerlessImageHandlerStack extends Stack {
           {
             Label: { default: "Image Sources" },
             Parameters: [sourceBucketsParameter.logicalId],
-          },
-          {
-            Label: { default: "Demo UI" },
-            Parameters: [deployDemoUIParameter.logicalId],
           },
           {
             Label: { default: "Event Logging" },
@@ -247,7 +234,6 @@ export class ServerlessImageHandlerStack extends Stack {
           [corsEnabledParameter.logicalId]: { default: "CORS Enabled" },
           [corsOriginParameter.logicalId]: { default: "CORS Origin" },
           [sourceBucketsParameter.logicalId]: { default: "Source Buckets" },
-          [deployDemoUIParameter.logicalId]: { default: "Deploy Demo UI" },
           [logRetentionPeriodParameter.logicalId]: {
             default: "Log Retention Period",
           },

@@ -173,7 +173,6 @@ export class CustomResourcesConstruct extends Construct {
       AnonymousData: props.anonymousData,
       CorsEnabled: props.corsEnabled,
       SourceBuckets: props.sourceBuckets,
-      DeployDemoUi: props.deployUI,
       LogRetentionPeriod: props.logRetentionPeriod,
       AutoWebP: props.autoWebP,
       EnableSignature: props.enableSignature,

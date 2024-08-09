@@ -268,7 +268,6 @@ async function sendAnonymousMetric(
         Type: requestType,
         CorsEnabled: requestProperties.CorsEnabled,
         NumberOfSourceBuckets: numberOfSourceBuckets,
-        DeployDemoUi: requestProperties.DeployDemoUi,
         LogRetentionPeriod: requestProperties.LogRetentionPeriod,
         AutoWebP: requestProperties.AutoWebP,
         EnableSignature: requestProperties.EnableSignature,
