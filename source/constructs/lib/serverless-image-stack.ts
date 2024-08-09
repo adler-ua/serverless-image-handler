@@ -8,6 +8,7 @@ import { ConditionAspect, SuppressLambdaFunctionCfnRulesAspect } from "../utils/
 import { BackEnd } from "./back-end/back-end-construct";
 import { CommonResources } from "./common-resources/common-resources-construct";
 import { SolutionConstructProps, YesNo } from "./types";
+import { env } from "process";
 
 export interface ServerlessImageHandlerStackProps extends StackProps {
   readonly solutionId: string;
