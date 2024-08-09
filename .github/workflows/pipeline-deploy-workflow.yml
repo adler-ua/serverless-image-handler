@@ -66,5 +66,6 @@ jobs:
         run: cdk diff
 
       - name: CDK deploy
-        run: overrideWarningsEnabled=false npx cdk deploy --all \
-              --parameters SourceBucketsParameter=${{ env.DIST_OUTPUT_BUCKET }} --require-approval never
+        run: overrideWarningsEnabled=false npx cdk deploy --all\
+               --parameters SourceBucketsParameter=${{ env.DIST_OUTPUT_BUCKET }}\
+                --require-approval never
