@@ -72,12 +72,12 @@ jobs:
       #  if: github.ref == 'refs/heads/main'
       #  run: cdk bootstrap
 
+      - name: CDK bootstrap
+        run: overrideWarningsEnabled=false npx cdk bootstrap --all --require-approval never
+
       - name: CDK diff
         id: cdk-diff
         run: NODE_OPTIONS=--max_old_space_size=6000 && cdk diff
-
-      - name: CDK bootstrap
-        run: overrideWarningsEnabled=false npx cdk bootstrap --all --require-approval never
 
       - name: CDK deploy
         run: overrideWarningsEnabled=false npx cdk bootstrap
