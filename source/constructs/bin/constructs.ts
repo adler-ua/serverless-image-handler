@@ -18,6 +18,7 @@ if (DIST_OUTPUT_BUCKET && SOLUTION_NAME && VERSION)
     bucketPrefix: `${SOLUTION_NAME}/${VERSION}/`,
   });
 
+  
 const app = new App();
 const solutionDisplayName = "Serverless Image Handler";
 const solutionVersion = VERSION ?? app.node.tryGetContext("solutionVersion");
