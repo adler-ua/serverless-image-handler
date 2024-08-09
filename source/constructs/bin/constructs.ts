@@ -11,12 +11,12 @@ let synthesizer = new DefaultStackSynthesizer({
 
 // Solutions pipeline deployment
 const { DIST_OUTPUT_BUCKET, REGION, ACCOUNT, SOLUTION_NAME, VERSION } = process.env;
-if (DIST_OUTPUT_BUCKET && SOLUTION_NAME && VERSION)
-  synthesizer = new DefaultStackSynthesizer({
-    generateBootstrapVersionRule: false,
-    fileAssetsBucketName: `${DIST_OUTPUT_BUCKET}-\${AWS::Region}`,
-    bucketPrefix: `${SOLUTION_NAME}/${VERSION}/`,
-  });
+// if (DIST_OUTPUT_BUCKET && SOLUTION_NAME && VERSION)
+//   synthesizer = new DefaultStackSynthesizer({
+//     generateBootstrapVersionRule: false,
+//     fileAssetsBucketName: `${DIST_OUTPUT_BUCKET}-\${AWS::Region}`,
+//     bucketPrefix: `${SOLUTION_NAME}/${VERSION}/`,
+//   });
 
 const app = new App();
 const solutionDisplayName = "Serverless Image Handler";
@@ -24,7 +24,7 @@ const solutionVersion = VERSION ?? app.node.tryGetContext("solutionVersion");
 const description = `(${app.node.tryGetContext("solutionId")}) - ${solutionDisplayName}. Version ${solutionVersion}`;
 // eslint-disable-next-line no-new
 new ServerlessImageHandlerStack(app, "ServerlessImageHandlerStack", {
-  synthesizer,
+  //synthesizer,
   description,
   solutionId: app.node.tryGetContext("solutionId"),
   solutionVersion,
