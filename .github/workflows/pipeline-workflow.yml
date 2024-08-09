@@ -45,7 +45,10 @@ jobs:
       - name: npm install
         working-directory: source
         run: npm install
-          cd source/constructs && npm install
+      
+      - name: npm install for constructs
+        working-directory: source/constructs
+        run: npm install
 
       - name: install aws-cdk
         run: npm install -g aws-cdk
