@@ -8,16 +8,26 @@ env:
   VERSION: 1
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'source/constructs/**'
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - 'infrastructure/**'
   workflow_dispatch:
 
 jobs:
   pipeline-job:
     name: Pipeline Job
-    if: github.repository_owner == 'aws-solutions'
+    #if: github.repository_owner == 'aws-solutions'
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: source/constructs/infrastructure
+        working-directory: source/constructs
     permissions:
       contents: read
       pull-requests: write
@@ -59,5 +69,5 @@ jobs:
         run: cdk diff
 
       - name: CDK Deploy
-        if: github.ref == 'refs/heads/main'
+        #if: github.ref == 'refs/heads/main'
         run: cdk deploy --all --require-approval never
