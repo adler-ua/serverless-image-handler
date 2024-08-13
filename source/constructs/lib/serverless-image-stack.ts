@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { PriceClass } from "aws-cdk-lib/aws-cloudfront";
-import { Aspects, CfnMapping, CfnOutput, CfnParameter, Stack, StackProps, Tags } from "aws-cdk-lib";
+import { Fn, Aws, Aspects, CfnOutput, CfnParameter, Stack, StackProps, Tags } from "aws-cdk-lib";
 import { Construct } from "constructs";
-import { ConditionAspect, SuppressLambdaFunctionCfnRulesAspect } from "../utils/aspects";
+import { SuppressLambdaFunctionCfnRulesAspect } from "../utils/aspects";
 import { BackEnd } from "./back-end/back-end-construct";
-import { CommonResources } from "./common-resources/common-resources-construct";
-import { SolutionConstructProps, YesNo } from "./types";
-import { env } from "process";
+import { BackEndProps, AppRegistryApplicationProps } from "./types";
+import * as appreg from "@aws-cdk/aws-servicecatalogappregistry-alpha";
 
 export interface ServerlessImageHandlerStackProps extends StackProps {
   readonly solutionId: string;
   readonly solutionName: string;
   readonly solutionVersion: string;
+  readonly stageName: string;
 }
 
 export class ServerlessImageHandlerStack extends Stack {
@@ -67,53 +67,6 @@ export class ServerlessImageHandlerStack extends Stack {
       default: "1",
     });
 
-    const autoWebPParameter = new CfnParameter(this, "AutoWebPParameter", {
-      type: "String",
-      description: `Would you like to enable automatic WebP based on accept headers? Select 'Yes' if so.`,
-      allowedValues: ["Yes", "No"],
-      default: "No",
-    });
-
-    const enableSignatureParameter = new CfnParameter(this, "EnableSignatureParameter", {
-      type: "String",
-      description: `Would you like to enable the signature? If so, select 'Yes' and provide SecretsManagerSecret and SecretsManagerKey values.`,
-      allowedValues: ["Yes", "No"],
-      default: "No",
-    });
-
-    const secretsManagerSecretParameter = new CfnParameter(this, "SecretsManagerSecretParameter", {
-      type: "String",
-      description: "The name of AWS Secrets Manager secret. You need to create your secret under this name.",
-      default: "",
-    });
-
-    const secretsManagerKeyParameter = new CfnParameter(this, "SecretsManagerKeyParameter", {
-      type: "String",
-      description:
-        "The name of AWS Secrets Manager secret key. You need to create secret key with this key name. The secret value would be used to check signature.",
-      default: "",
-    });
-
-    const enableDefaultFallbackImageParameter = new CfnParameter(this, "EnableDefaultFallbackImageParameter", {
-      type: "String",
-      description: `Would you like to enable the default fallback image? If so, select 'Yes' and provide FallbackImageS3Bucket and FallbackImageS3Key values.`,
-      allowedValues: ["Yes", "No"],
-      default: "No",
-    });
-
-    const fallbackImageS3BucketParameter = new CfnParameter(this, "FallbackImageS3BucketParameter", {
-      type: "String",
-      description:
-        "The name of the Amazon S3 bucket which contains the default fallback image. e.g. my-fallback-image-bucket",
-      default: "",
-    });
-
-    const fallbackImageS3KeyParameter = new CfnParameter(this, "FallbackImageS3KeyParameter", {
-      type: "String",
-      description: "The name of the default fallback image object key including prefix. e.g. prefix/image.jpg",
-      default: "",
-    });
-
     const cloudFrontPriceClassParameter = new CfnParameter(this, "CloudFrontPriceClassParameter", {
       type: "String",
       description:
@@ -122,64 +75,24 @@ export class ServerlessImageHandlerStack extends Stack {
       default: PriceClass.PRICE_CLASS_ALL,
     });
 
-    const solutionMapping = new CfnMapping(this, "Solution", {
-      mapping: {
-        Config: {
-          AnonymousUsage: "Yes",
-          SolutionId: props.solutionId,
-          Version: props.solutionVersion,
-        },
-      },
-      lazy: true,
-    });
-
-    const anonymousUsage = `${solutionMapping.findInMap("Config", "AnonymousUsage")}`;
-
-    const solutionConstructProps: SolutionConstructProps = {
+    const backendProps: BackEndProps = {
       corsEnabled: corsEnabledParameter.valueAsString,
       corsOrigin: corsOriginParameter.valueAsString,
       sourceBuckets: sourceBucketsParameter.valueAsString,
       logRetentionPeriod: logRetentionPeriodParameter.valueAsNumber,
-      autoWebP: autoWebPParameter.valueAsString,
-      enableSignature: enableSignatureParameter.valueAsString as YesNo,
-      secretsManager: secretsManagerSecretParameter.valueAsString,
-      secretsManagerKey: secretsManagerKeyParameter.valueAsString,
-      enableDefaultFallbackImage: enableDefaultFallbackImageParameter.valueAsString as YesNo,
-      fallbackImageS3Bucket: fallbackImageS3BucketParameter.valueAsString,
-      fallbackImageS3KeyBucket: fallbackImageS3KeyParameter.valueAsString,
-    };
-
-    const commonResources = new CommonResources(this, "CommonResources", {
-      solutionId: props.solutionId,
-      solutionVersion: props.solutionVersion,
-      solutionName: props.solutionName,
-      ...solutionConstructProps,
-    });
-
-    const backEnd = new BackEnd(this, "BackEnd", {
+      
       solutionVersion: props.solutionVersion,
       solutionId: props.solutionId,
       solutionName: props.solutionName,
-      secretsManagerPolicy: commonResources.secretsManagerPolicy,
-      logsBucket: commonResources.logsBucket,
-      uuid: commonResources.customResources.uuid,
       cloudFrontPriceClass: cloudFrontPriceClassParameter.valueAsString,
-      createSourceBucketsResource: commonResources.customResources.createSourceBucketsResource,
-      ...solutionConstructProps,
-    });
+      stageName: props.stageName,
 
-    commonResources.customResources.setupValidateSourceAndFallbackImageBuckets({
-      sourceBuckets: sourceBucketsParameter.valueAsString,
-      fallbackImageS3Bucket: fallbackImageS3BucketParameter.valueAsString,
-      fallbackImageS3Key: fallbackImageS3KeyParameter.valueAsString,
-    });
+      createSourceBucketsResource: this.createSourceBucketsResource,
+      };
+    
+    const backEnd = new BackEnd(this, "BackEnd", backendProps);
 
-    commonResources.customResources.setupValidateSecretsManager({
-      secretsManager: secretsManagerSecretParameter.valueAsString,
-      secretsManagerKey: secretsManagerKeyParameter.valueAsString,
-    });
-
-    commonResources.appRegistryApplication({
+    this.appRegistryApplication({
       description: `${props.solutionId} - ${props.solutionName}. Version ${props.solutionVersion}`,
       solutionVersion: props.solutionVersion,
       solutionId: props.solutionId,
@@ -201,32 +114,6 @@ export class ServerlessImageHandlerStack extends Stack {
             Label: { default: "Event Logging" },
             Parameters: [logRetentionPeriodParameter.logicalId],
           },
-          {
-            Label: {
-              default:
-                "Image URL Signature (Note: Enabling signature is not compatible with previous image URLs, which could result in broken image links. Please refer to the implementation guide for details: https://docs.aws.amazon.com/solutions/latest/serverless-image-handler/considerations.html)",
-            },
-            Parameters: [
-              enableSignatureParameter.logicalId,
-              secretsManagerSecretParameter.logicalId,
-              secretsManagerKeyParameter.logicalId,
-            ],
-          },
-          {
-            Label: {
-              default:
-                "Default Fallback Image (Note: Enabling default fallback image returns the default fallback image instead of JSON object when error happens. Please refer to the implementation guide for details: https://docs.aws.amazon.com/solutions/latest/serverless-image-handler/considerations.html)",
-            },
-            Parameters: [
-              enableDefaultFallbackImageParameter.logicalId,
-              fallbackImageS3BucketParameter.logicalId,
-              fallbackImageS3KeyParameter.logicalId,
-            ],
-          },
-          {
-            Label: { default: "Auto WebP" },
-            Parameters: [autoWebPParameter.logicalId],
-          },
         ],
         ParameterLabels: {
           [corsEnabledParameter.logicalId]: { default: "CORS Enabled" },
@@ -234,23 +121,6 @@ export class ServerlessImageHandlerStack extends Stack {
           [sourceBucketsParameter.logicalId]: { default: "Source Buckets" },
           [logRetentionPeriodParameter.logicalId]: {
             default: "Log Retention Period",
-          },
-          [autoWebPParameter.logicalId]: { default: "AutoWebP" },
-          [enableSignatureParameter.logicalId]: { default: "Enable Signature" },
-          [secretsManagerSecretParameter.logicalId]: {
-            default: "SecretsManager Secret",
-          },
-          [secretsManagerKeyParameter.logicalId]: {
-            default: "SecretsManager Key",
-          },
-          [enableDefaultFallbackImageParameter.logicalId]: {
-            default: "Enable Default Fallback Image",
-          },
-          [fallbackImageS3BucketParameter.logicalId]: {
-            default: "Fallback Image S3 Bucket",
-          },
-          [fallbackImageS3KeyParameter.logicalId]: {
-            default: "Fallback Image S3 Key",
           },
           [cloudFrontPriceClassParameter.logicalId]: {
             default: "CloudFront PriceClass",
@@ -272,21 +142,56 @@ export class ServerlessImageHandlerStack extends Stack {
       value: corsEnabledParameter.valueAsString,
       description: "Indicates whether Cross-Origin Resource Sharing (CORS) has been enabled for the image handler API.",
     });
-    new CfnOutput(this, "CorsOrigin", {
-      value: corsOriginParameter.valueAsString,
-      description: "Origin value returned in the Access-Control-Allow-Origin header of image handler API responses.",
-      condition: commonResources.conditions.enableCorsCondition,
-    });
     new CfnOutput(this, "LogRetentionPeriod", {
       value: logRetentionPeriodParameter.valueAsString,
       description: "Number of days for event logs from Lambda to be retained in CloudWatch.",
     });
-    new CfnOutput(this, "CloudFrontLoggingBucket", {
-      value: commonResources.logsBucket.bucketName,
-      description: "Amazon S3 bucket for storing CloudFront access logs.",
-    })
 
     Aspects.of(this).add(new SuppressLambdaFunctionCfnRulesAspect());
     Tags.of(this).add("SolutionId", props.solutionId);
+  }
+
+  public createSourceBucketsResource(resourceName: string = "") {
+    return Fn.split(
+      ',',
+      Fn.sub(
+        `arn:aws:s3:::\${rest}${resourceName}`,
+
+        {
+          rest: Fn.join(
+            `${resourceName},arn:aws:s3:::`,
+            Fn.split(",", Fn.join("", Fn.split(" ", Fn.ref('SourceBucketsParameter'))))
+          ),
+        },
+      ),
+    )
+  }
+
+  public appRegistryApplication(props: AppRegistryApplicationProps) {
+    const stack = Stack.of(this);
+    const applicationType = "AWS-Solutions";
+
+    const application = new appreg.Application(stack, "AppRegistry", {
+      applicationName: Fn.join("-", ["AppRegistry", Aws.STACK_NAME, Aws.REGION, Aws.ACCOUNT_ID]),
+      description: `Service Catalog application to track and manage all your resources for the solution ${props.applicationName}`,
+    });
+    application.associateApplicationWithStack(stack);
+
+    Tags.of(application).add("Solutions:SolutionID", props.solutionId);
+    Tags.of(application).add("Solutions:SolutionName", props.applicationName);
+    Tags.of(application).add("Solutions:SolutionVersion", props.solutionVersion);
+    Tags.of(application).add("Solutions:ApplicationType", applicationType);
+
+    const attributeGroup = new appreg.AttributeGroup(stack, "DefaultApplicationAttributeGroup", {
+      attributeGroupName: `A30-AppRegistry-${Aws.STACK_NAME}`,
+      description: "Attribute group for solution information",
+      attributes: {
+        applicationType,
+        version: props.solutionVersion,
+        solutionID: props.solutionId,
+        solutionName: props.applicationName,
+      },
+    });
+    attributeGroup.associateWith(application);
   }
 }

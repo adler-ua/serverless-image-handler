@@ -13,32 +13,20 @@ import {
   OriginRequestPolicy,
   OriginSslPolicy,
   PriceClass,
-  ViewerProtocolPolicy,
+  ViewerProtocolPolicy
 } from "aws-cdk-lib/aws-cloudfront";
 import { HttpOrigin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Policy, PolicyStatement, Role, ServicePrincipal } from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
-import { IBucket } from "aws-cdk-lib/aws-s3";
-import { ArnFormat, Aws, Duration, Lazy, Stack } from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import { ArnFormat, Aws, Duration, Lazy, Stack, RemovalPolicy } from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { CloudFrontToApiGatewayToLambda } from "@aws-solutions-constructs/aws-cloudfront-apigateway-lambda";
-
 import { addCfnSuppressRules } from "../../utils/utils";
-import { SolutionConstructProps } from "../types";
+import { BackEndProps } from "../types";
 import * as api from "aws-cdk-lib/aws-apigateway";
-
-export interface BackEndProps extends SolutionConstructProps {
-  readonly solutionVersion: string;
-  readonly solutionId: string;
-  readonly solutionName: string;
-  readonly secretsManagerPolicy: Policy;
-  readonly logsBucket: IBucket;
-  readonly uuid: string;
-  readonly cloudFrontPriceClass: string;
-  readonly createSourceBucketsResource: (key?: string) => string[];
-}
 
 export class BackEnd extends Construct {
   public domainName: string;
@@ -50,7 +38,6 @@ export class BackEnd extends Construct {
       assumedBy: new ServicePrincipal("lambda.amazonaws.com"),
       path: "/",
     });
-    props.secretsManagerPolicy.attachToRole(imageHandlerLambdaFunctionRole);
 
     const imageHandlerLambdaFunctionRolePolicy = new Policy(this, "ImageHandlerFunctionPolicy", {
       statements: [
@@ -74,15 +61,24 @@ export class BackEnd extends Construct {
           resources: props.createSourceBucketsResource(),
         }),
         new PolicyStatement({
-          actions: ["s3:GetObject"],
-          resources: [`arn:aws:s3:::${props.fallbackImageS3Bucket}/${props.fallbackImageS3KeyBucket}`],
-        }),
-        new PolicyStatement({
           actions: ["rekognition:DetectFaces", "rekognition:DetectModerationLabels"],
           resources: ["*"],
         }),
       ],
     });
+
+    // s3 access policy for image handler lambda function
+    // imageHandlerLambdaFunctionRole.addToRolePolicy(new iam.PolicyStatement({
+    //   effect: iam.Effect.ALLOW,
+    //   actions: [
+    //     "s3:GetObject",
+    //     "s3:PutObject",
+    //     "s3:ListBucket",
+    //   ],
+    //   resources: [
+    //     "arn:aws:s3:::*",
+    //   ],
+    // }));
 
     addCfnSuppressRules(imageHandlerLambdaFunctionRolePolicy, [
       { id: "W12", reason: "rekognition:DetectFaces requires '*' resources." },
@@ -97,18 +93,12 @@ export class BackEnd extends Construct {
       role: imageHandlerLambdaFunctionRole,
       entry: path.join(__dirname, "../../../image-handler/index.ts"),
       environment: {
-        AUTO_WEBP: props.autoWebP,
+        AUTO_WEBP: "No",
         CORS_ENABLED: props.corsEnabled,
         CORS_ORIGIN: props.corsOrigin,
         SOURCE_BUCKETS: props.sourceBuckets,
         REWRITE_MATCH_PATTERN: "",
         REWRITE_SUBSTITUTION: "",
-        ENABLE_SIGNATURE: props.enableSignature,
-        SECRETS_MANAGER: props.secretsManager,
-        SECRET_KEY: props.secretsManagerKey,
-        ENABLE_DEFAULT_FALLBACK_IMAGE: props.enableDefaultFallbackImage,
-        DEFAULT_FALLBACK_IMAGE_BUCKET: props.fallbackImageS3Bucket,
-        DEFAULT_FALLBACK_IMAGE_KEY: props.fallbackImageS3KeyBucket,
         SOLUTION_VERSION: props.solutionVersion,
         SOLUTION_ID: props.solutionId,
       },
@@ -141,8 +131,16 @@ export class BackEnd extends Construct {
       },
     ]);
 
+    const bucketSuffix = `${Aws.STACK_NAME}-${Aws.REGION}-${Aws.ACCOUNT_ID}`;
+
+    // log bucket for cloudfront
+    const logBucket = new s3.Bucket(this, 'LogBucket', {
+      bucketName: `s3-logbucket${imageHandlerLambdaFunction.functionName}-${props.stageName}-cac1-01`,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
     const cachePolicy = new CachePolicy(this, "CachePolicy", {
-      cachePolicyName: `ServerlessImageHandler-${props.uuid}`,
+      cachePolicyName: `ServerlessImageHandler`,
       defaultTtl: Duration.days(1),
       minTtl: Duration.seconds(1),
       maxTtl: Duration.days(365),
@@ -152,7 +150,7 @@ export class BackEnd extends Construct {
     });
 
     const originRequestPolicy = new OriginRequestPolicy(this, "OriginRequestPolicy", {
-      originRequestPolicyName: `ServerlessImageHandler-${props.uuid}`,
+      originRequestPolicyName: `ServerlessImageHandler`,
       headerBehavior: CacheHeaderBehavior.allowList("origin", "accept"),
       queryStringBehavior: CacheQueryStringBehavior.allowList("signature"),
     });
@@ -181,7 +179,7 @@ export class BackEnd extends Construct {
       },
       priceClass: props.cloudFrontPriceClass as PriceClass,
       enableLogging: true,
-      logBucket: props.logsBucket,
+      logBucket: logBucket,
       logFilePrefix: "api-cloudfront/",
       errorResponses: [
         { httpStatus: 500, ttl: Duration.minutes(10) },
@@ -199,7 +197,7 @@ export class BackEnd extends Construct {
     const apiGatewayProps: LambdaRestApiProps = {
       handler: imageHandlerLambdaFunction,
       deployOptions: {
-        stageName: "image",
+        stageName: props.stageName,
       },
       binaryMediaTypes: ["*/*"],
       defaultMethodOptions: {

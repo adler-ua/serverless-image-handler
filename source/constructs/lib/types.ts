@@ -1,18 +1,25 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-export type YesNo = "Yes" | "No";
+import * as cdk from 'aws-cdk-lib';
 
-export interface SolutionConstructProps {
+export interface BackEndProps extends cdk.StackProps {
   readonly corsEnabled: string;
   readonly corsOrigin: string;
   readonly sourceBuckets: string;
   readonly logRetentionPeriod: number;
-  readonly autoWebP: string;
-  readonly enableSignature: YesNo;
-  readonly secretsManager: string;
-  readonly secretsManagerKey: string;
-  readonly enableDefaultFallbackImage: YesNo;
-  readonly fallbackImageS3Bucket: string;
-  readonly fallbackImageS3KeyBucket: string;
+  readonly solutionVersion: string;
+  readonly solutionId: string;
+  readonly solutionName: string;
+  readonly cloudFrontPriceClass: string;
+  readonly stageName: string;
+  
+  readonly createSourceBucketsResource: (key?: string) => string[];
+}
+
+export interface AppRegistryApplicationProps {
+  readonly description: string;
+  readonly solutionId: string;
+  readonly applicationName: string;
+  readonly solutionVersion: string;
 }

@@ -6,6 +6,7 @@ env:
   ACCOUNT: 637747527212
   SOURCE_BUCKET: my-serverless-image-handler-images
   SOLUTION_NAME: my-serverless-image-handler
+  STAGE: image
   VERSION: 1
 
 on:
@@ -37,10 +38,6 @@ jobs:
       
       - name: npm install for constructs
         working-directory: source/constructs
-        run: npm install
-      
-      - name: npm install for custom resource
-        working-directory: source/custom-resource
         run: npm install
       
       - name: npm install image-handler
