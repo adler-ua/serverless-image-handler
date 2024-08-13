@@ -5,8 +5,6 @@ import Rekognition from "aws-sdk/clients/rekognition";
 import S3 from "aws-sdk/clients/s3";
 import SecretsManager from "aws-sdk/clients/secretsmanager";
 
-import { getOptions } from "../solution-utils/get-options";
-import { isNullOrWhiteSpace } from "../solution-utils/helpers";
 import { ImageHandler } from "./image-handler";
 import { ImageRequest } from "./image-request";
 import { Headers, ImageHandlerEvent, ImageHandlerExecutionResult, StatusCodes } from "./lib";
@@ -56,38 +54,6 @@ export async function handler(event: ImageHandlerEvent): Promise<ImageHandlerExe
     };
   } catch (error) {
     console.error(error);
-
-    // Default fallback image
-    const { ENABLE_DEFAULT_FALLBACK_IMAGE, DEFAULT_FALLBACK_IMAGE_BUCKET, DEFAULT_FALLBACK_IMAGE_KEY } = process.env;
-    if (
-      ENABLE_DEFAULT_FALLBACK_IMAGE === "Yes" &&
-      !isNullOrWhiteSpace(DEFAULT_FALLBACK_IMAGE_BUCKET) &&
-      !isNullOrWhiteSpace(DEFAULT_FALLBACK_IMAGE_KEY)
-    ) {
-      try {
-        const defaultFallbackImage = await s3Client
-          .getObject({
-            Bucket: DEFAULT_FALLBACK_IMAGE_BUCKET,
-            Key: DEFAULT_FALLBACK_IMAGE_KEY,
-          })
-          .promise();
-
-        const headers = getResponseHeaders(false, isAlb);
-        headers["Content-Type"] = defaultFallbackImage.ContentType;
-        headers["Last-Modified"] = defaultFallbackImage.LastModified;
-        headers["Cache-Control"] = "max-age=31536000,public";
-
-        return {
-          statusCode: error.status ? error.status : StatusCodes.INTERNAL_SERVER_ERROR,
-          isBase64Encoded: true,
-          headers,
-          body: defaultFallbackImage.Body.toString("base64"),
-        };
-      } catch (error) {
-        console.error("Error occurred while getting the default fallback image.", error);
-      }
-    }
-
     const { statusCode, body } = getErrorResponse(error);
     return {
       statusCode,
@@ -165,4 +131,15 @@ export function getErrorResponse(error) {
       status: StatusCodes.INTERNAL_SERVER_ERROR,
     }),
   };
+}
+
+export function getOptions(options: Record<string, unknown> = {}): Record<string, unknown> {
+  const { SOLUTION_ID, SOLUTION_VERSION } = process.env;
+  if (SOLUTION_ID && SOLUTION_VERSION) {
+    if (SOLUTION_ID.trim() !== "" && SOLUTION_VERSION.trim() !== "") {
+      options.customUserAgent = `AwsSolution/${SOLUTION_ID}/${SOLUTION_VERSION}`;
+    }
+  }
+
+  return options;
 }

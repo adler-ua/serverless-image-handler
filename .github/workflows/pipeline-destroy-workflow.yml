@@ -36,10 +36,6 @@ jobs:
         working-directory: source/constructs
         run: npm install
       
-      - name: npm install for custom resource
-        working-directory: source/custom-resource
-        run: npm install
-      
       - name: npm install image-handler
         working-directory: source/image-handler
         run: npm install
