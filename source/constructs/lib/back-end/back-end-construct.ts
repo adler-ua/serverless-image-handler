@@ -135,7 +135,7 @@ export class BackEnd extends Construct {
 
     // log bucket for cloudfront
     const logBucket = new s3.Bucket(this, 'LogBucket', {
-      bucketName: `s3-logbucket${imageHandlerLambdaFunction.functionName}-${props.stageName}-cac1-01`,
+      bucketName: `s3-logbucket-imageHandlerLambdaFunction-${props.stageName}`,
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
