@@ -4,7 +4,7 @@ env:
   AWS_DEPLOY_ROLE_ARN: arn:aws:iam::637747527212:role/github-actions
   REGION: us-east-1
   ACCOUNT: 637747527212
-  SOURCE_BUCKET: my-serverless-image-handler-images
+  SOURCE_BUCKET: my-serverless-image-handler-images,alternative-images
   SOLUTION_NAME: my-serverless-image-handler
   STAGE: image
   VERSION: 1
